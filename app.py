@@ -7,7 +7,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 # 🎨 Page Configuration
 st.set_page_config(
-    page_title="⚡ Electricity Demand Forecasting",
+    page_title="👑 Electricity Demand Forecasting",
     page_icon="👑",
     layout="centered",
     initial_sidebar_state="collapsed"
