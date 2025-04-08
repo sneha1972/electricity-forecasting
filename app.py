@@ -1,65 +1,58 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from tensorflow.keras.models import load_model
+import tensorflow as tf
 from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="Electricity Demand Forecasting", layout="wide")
-
+st.set_page_config(page_title="Electricity Demand Forecasting", layout="centered")
 st.title("⚡ Electricity Demand Forecasting")
-st.write("Upload a CSV file with electricity demand data to view LSTM-based predictions.")
+st.write("Upload a CSV file with historical electricity demand data to view LSTM-based predictions.")
 
-uploaded_file = st.file_uploader("📁 Upload your dataset (.csv)", type=["csv"])
+uploaded_file = st.file_uploader("📁 Upload your electricity_demand_x_company_2022_2024.csv", type="csv")
+
+@st.cache_resource
+def load_model():
+    return tf.keras.models.load_model("model.h5")
+
+model = load_model()
 
 if uploaded_file is not None:
     try:
-        data = pd.read_csv(uploaded_file)
+        df = pd.read_csv(uploaded_file)
+
         st.subheader("📊 Raw Data Preview")
-        st.write(data.head())
+        st.dataframe(df.head())
 
-        # Select only numeric columns
-        numeric_cols = data.select_dtypes(include=[np.number]).columns.tolist()
-
-        if len(numeric_cols) < 2:
-            st.error("❌ Dataset must have at least two numeric columns for prediction.")
+        if "Electricity_Demand_kWh" not in df.columns:
+            st.error("❌ CSV must contain a column named 'Electricity_Demand_kWh'")
         else:
-            selected_cols = numeric_cols[:2]
-            st.success(f"✅ Using columns {selected_cols} for prediction")
-
-            # Preprocessing
-            selected_data = data[selected_cols].dropna()
             scaler = MinMaxScaler()
-            scaled_data = scaler.fit_transform(selected_data)
+            scaled = scaler.fit_transform(df[["Electricity_Demand_kWh", "Temperature_C"]])
 
-            sequence_length = 30
+            seq_len = 30
             X = []
-            for i in range(sequence_length, len(scaled_data)):
-                seq = scaled_data[i - sequence_length:i]
-                if seq.shape[0] == sequence_length:
-                    X.append(seq)
+            for i in range(seq_len, len(scaled)):
+                X.append(scaled[i - seq_len:i])
+
             X = np.array(X)
-
-            # Reshape if needed
-            if X.ndim == 2:
-                X = np.expand_dims(X, axis=2)
-
-            model = load_model("model.h5")
             predictions = model.predict(X)
 
-            # Inverse scale only the target (first column)
-            dummy = np.zeros((predictions.shape[0], scaled_data.shape[1]))
-            dummy[:, 0] = predictions[:, 0]
-            inv_scaled = scaler.inverse_transform(dummy)[:, 0]
+            padded_predictions = np.concatenate([predictions, np.zeros((predictions.shape[0], 1))], axis=1)
+            inverse_predictions = scaler.inverse_transform(padded_predictions)[:, 0]
 
-            # Plot
             st.subheader("📈 Forecasted Electricity Demand")
-            plt.figure(figsize=(12, 6))
-            plt.plot(inv_scaled, label="Predicted Demand (kWh)")
-            plt.xlabel("Time Step")
-            plt.ylabel("Electricity Demand (kWh)")
-            plt.legend()
-            st.pyplot(plt)
+            fig, ax = plt.subplots()
+            ax.plot(df["Electricity_Demand_kWh"].values[seq_len:], label="Actual", alpha=0.6)
+            ax.plot(inverse_predictions, label="Predicted", color="orange")
+            ax.set_xlabel("Time")
+            ax.set_ylabel("Electricity Demand (kWh)")
+            ax.legend()
+            st.pyplot(fig)
+
+            st.success("✅ Forecasting complete!")
 
     except Exception as e:
-        st.error(f"❌ Error processing file: {e}")
+        st.error(f"❌ Error: {e}")
+else:
+    st.info("👆 Please upload your CSV file to begin.")
