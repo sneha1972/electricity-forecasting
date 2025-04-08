@@ -113,5 +113,4 @@ if uploaded_file is not None:
         st.error(f"❌ Error processing file: {e}")
 
 # 👣 Footer
-st.markdown("<hr><center>Made with ❤️ by Chilaka</center>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
