@@ -114,5 +114,14 @@ if uploaded_file is not None:
         st.error(f"❌ Error processing file: {e}")
 
 # 👣 Footer
-st.markdown("<div class='footer-text'>Final Year Project by CSBS Students - GPREC</div>", unsafe_allow_html=True)
+st.markdown("""
+    <hr style="margin-top: 3rem; margin-bottom: 1rem;">
+    <div style='text-align: center; color: #555; font-size: 14px;'>
+        Developed by <strong>CSBS Final Year Students – GPREC</strong><br>
+        <em>Electricity Demand Forecasting using LSTM</em><br>
+        © 2025 All rights reserved.
+    </div>
+""", unsafe_allow_html=True)
+
 st.markdown("</div>", unsafe_allow_html=True)
+
