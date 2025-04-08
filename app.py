@@ -5,12 +5,15 @@ import tensorflow as tf
 from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
 
+# Page config
 st.set_page_config(page_title="Electricity Demand Forecasting", layout="centered")
 st.title("⚡ Electricity Demand Forecasting")
-st.write("Upload a CSV file with historical electricity demand data to view LSTM-based predictions.")
+st.write("Upload a CSV file with electricity demand data to view LSTM-based predictions.")
 
-uploaded_file = st.file_uploader("📁 Upload your electricity_demand_x_company_2022_2024.csv", type="csv")
+# File upload
+uploaded_file = st.file_uploader("📁 Upload your dataset (.csv)", type="csv")
 
+# Load model
 @st.cache_resource
 def load_model():
     return tf.keras.models.load_model("model.h5")
@@ -24,35 +27,46 @@ if uploaded_file is not None:
         st.subheader("📊 Raw Data Preview")
         st.dataframe(df.head())
 
-        if "Electricity_Demand_kWh" not in df.columns:
-            st.error("❌ CSV must contain a column named 'Electricity_Demand_kWh'")
-        else:
-            scaler = MinMaxScaler()
-            scaled = scaler.fit_transform(df[["Electricity_Demand_kWh", "Temperature_C"]])
+        # Try to find demand column automatically
+        demand_col = None
+        for col in df.columns:
+            if "demand" in col.lower():
+                demand_col = col
+                break
 
-            seq_len = 30
-            X = []
-            for i in range(seq_len, len(scaled)):
-                X.append(scaled[i - seq_len:i])
+        if demand_col is None:
+            demand_col = df.columns[0]  # fallback to first column
 
-            X = np.array(X)
-            predictions = model.predict(X)
+        st.info(f"Using column **'{demand_col}'** for prediction.")
 
-            padded_predictions = np.concatenate([predictions, np.zeros((predictions.shape[0], 1))], axis=1)
-            inverse_predictions = scaler.inverse_transform(padded_predictions)[:, 0]
+        # Normalize
+        scaler = MinMaxScaler()
+        demand_scaled = scaler.fit_transform(df[demand_col].values.reshape(-1, 1))
 
-            st.subheader("📈 Forecasted Electricity Demand")
-            fig, ax = plt.subplots()
-            ax.plot(df["Electricity_Demand_kWh"].values[seq_len:], label="Actual", alpha=0.6)
-            ax.plot(inverse_predictions, label="Predicted", color="orange")
-            ax.set_xlabel("Time")
-            ax.set_ylabel("Electricity Demand (kWh)")
-            ax.legend()
-            st.pyplot(fig)
+        # Create sequences
+        sequence_length = 30
+        X = []
+        for i in range(sequence_length, len(demand_scaled)):
+            X.append(demand_scaled[i - sequence_length:i])
+        X = np.array(X).reshape(-1, sequence_length, 1)
 
-            st.success("✅ Forecasting complete!")
+        # Predict
+        predictions = model.predict(X)
+        predictions_inverse = scaler.inverse_transform(predictions)
+
+        # Plot results
+        st.subheader("📈 Forecasted Electricity Demand")
+        fig, ax = plt.subplots()
+        ax.plot(predictions_inverse, label="Predicted", color="orange")
+        ax.plot(df[demand_col].values[sequence_length:], label="Actual", alpha=0.6)
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Demand")
+        ax.legend()
+        st.pyplot(fig)
+
+        st.success("✅ Forecasting complete!")
 
     except Exception as e:
-        st.error(f"❌ Error: {e}")
+        st.error(f"❌ Error processing file: {e}")
 else:
-    st.info("👆 Please upload your CSV file to begin.")
+    st.info("👆 Upload a CSV file to start.")
