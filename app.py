@@ -26,12 +26,6 @@ st.markdown("""
         text-align: center;
         font-family: 'Segoe UI';
     }
-    .css-1aumxhk {
-        color: #444;
-    }
-    .css-ffhzg2 {
-        font-size: 16px;
-    }
     .stDataFrame {
         background-color: rgba(255, 255, 255, 0.85);
         border-radius: 10px;
@@ -102,7 +96,7 @@ if uploaded_file is not None:
                     # 🖼️ Plotting
                     st.subheader("📈 Electricity Demand Prediction")
                     fig, ax = plt.subplots(figsize=(10, 4))
-                    ax.plot(predicted_values, color='#ff4d4d', linewidth=2)
+                    ax.plot(predicted_values, color='blue', linewidth=2)
                     ax.set_title("Predicted Electricity Demand", fontsize=16)
                     ax.set_xlabel("Time Steps")
                     ax.set_ylabel("Electricity Demand")
@@ -112,5 +106,14 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"❌ Error processing file: {e}")
 
-# 👣 Footer
+# 👣 Professional Footer
+st.markdown("""
+    <hr style="margin-top: 3rem; margin-bottom: 1rem;">
+    <div style='text-align: center; color: #555; font-size: 14px;'>
+        Developed by <strong>CSBS Final Year Students – GPREC</strong><br>
+        <em>Electricity Demand Forecasting using LSTM</em><br>
+        © 2025 All rights reserved.
+    </div>
+""", unsafe_allow_html=True)
+
 st.markdown("</div>", unsafe_allow_html=True)
