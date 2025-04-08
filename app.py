@@ -1,72 +1,71 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import tensorflow as tf
 from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.models import load_model
 import matplotlib.pyplot as plt
+import io
 
-# Page config
-st.set_page_config(page_title="Electricity Demand Forecasting", layout="centered")
+st.set_page_config(page_title="⚡ Electricity Demand Forecasting", layout="centered")
+
 st.title("⚡ Electricity Demand Forecasting")
 st.write("Upload a CSV file with electricity demand data to view LSTM-based predictions.")
 
-# File upload
-uploaded_file = st.file_uploader("📁 Upload your dataset (.csv)", type="csv")
-
-# Load model
-@st.cache_resource
-def load_model():
-    return tf.keras.models.load_model("model.h5")
-
-model = load_model()
+uploaded_file = st.file_uploader("📁 Upload your dataset (.csv)", type=["csv"])
 
 if uploaded_file is not None:
     try:
-        df = pd.read_csv(uploaded_file)
-
+        data = pd.read_csv(uploaded_file)
         st.subheader("📊 Raw Data Preview")
-        st.dataframe(df.head())
+        st.write(data.head())
 
-        # Try to find demand column automatically
-        demand_col = None
-        for col in df.columns:
-            if "demand" in col.lower():
-                demand_col = col
-                break
+        # Automatically pick numeric columns except date/time
+        numeric_cols = data.select_dtypes(include=[np.number]).columns.tolist()
+        if len(numeric_cols) == 0:
+            st.error("❌ No numeric columns found for prediction.")
+            st.stop()
 
-        if demand_col is None:
-            demand_col = df.columns[0]  # fallback to first column
+        st.success(f"✅ Using columns {numeric_cols} for prediction")
 
-        st.info(f"Using column **'{demand_col}'** for prediction.")
+        # Load model and get required input shape
+        model = load_model("model.h5")
+        sequence_length = 30  # You used 30 in training
 
-        # Normalize
+        # Scale data
         scaler = MinMaxScaler()
-        demand_scaled = scaler.fit_transform(df[demand_col].values.reshape(-1, 1))
+        scaled_data = scaler.fit_transform(data[numeric_cols])
 
         # Create sequences
-        sequence_length = 30
         X = []
-        for i in range(sequence_length, len(demand_scaled)):
-            X.append(demand_scaled[i - sequence_length:i])
-        X = np.array(X).reshape(-1, sequence_length, 1)
+        for i in range(sequence_length, len(scaled_data)):
+            seq = scaled_data[i-sequence_length:i]
+            if seq.shape[0] == sequence_length:
+                X.append(seq)
+        X = np.array(X)
 
-        # Predict
-        predictions = model.predict(X)
-        predictions_inverse = scaler.inverse_transform(predictions)
+        # Ensure correct shape
+        if X.ndim == 2:
+            X = np.expand_dims(X, axis=2)
 
-        # Plot results
-        st.subheader("📈 Forecasted Electricity Demand")
-        fig, ax = plt.subplots()
-        ax.plot(predictions_inverse, label="Predicted", color="orange")
-        ax.plot(df[demand_col].values[sequence_length:], label="Actual", alpha=0.6)
-        ax.set_xlabel("Time")
-        ax.set_ylabel("Demand")
-        ax.legend()
-        st.pyplot(fig)
+        # Make prediction
+        predictions_scaled = model.predict(X)
 
-        st.success("✅ Forecasting complete!")
+        # Inverse transform if possible (for single output)
+        if predictions_scaled.shape[1] == 1:
+            predictions = scaler.inverse_transform(
+                np.hstack((predictions_scaled, np.zeros((len(predictions_scaled), len(numeric_cols)-1))))
+            )[:, 0]
+        else:
+            predictions = predictions_scaled  # multi-output
+
+        # Plot
+        st.subheader("📈 Forecasted Demand")
+        plt.figure(figsize=(10, 4))
+        plt.plot(predictions, label="Predicted")
+        plt.xlabel("Time Step")
+        plt.ylabel("Predicted Value")
+        plt.legend()
+        st.pyplot(plt)
 
     except Exception as e:
         st.error(f"❌ Error processing file: {e}")
-else:
-    st.info("👆 Upload a CSV file to start.")
