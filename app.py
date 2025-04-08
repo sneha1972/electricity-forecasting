@@ -1,12 +1,11 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import load_model
+from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
-import io
 
-st.set_page_config(page_title="⚡ Electricity Demand Forecasting", layout="centered")
+st.set_page_config(page_title="Electricity Demand Forecasting", layout="wide")
 
 st.title("⚡ Electricity Demand Forecasting")
 st.write("Upload a CSV file with electricity demand data to view LSTM-based predictions.")
@@ -19,54 +18,48 @@ if uploaded_file is not None:
         st.subheader("📊 Raw Data Preview")
         st.write(data.head())
 
-        # Automatically pick numeric columns except date/time
-# Force only first 2 numeric features to match model input
-numeric_cols = data.select_dtypes(include=[np.number]).columns.tolist()[:2]
-        if len(numeric_cols) == 0:
-            st.error("❌ No numeric columns found for prediction.")
-            st.stop()
+        # Select only numeric columns
+        numeric_cols = data.select_dtypes(include=[np.number]).columns.tolist()
 
-        st.success(f"✅ Using columns {numeric_cols} for prediction")
-
-        # Load model and get required input shape
-        model = load_model("model.h5")
-        sequence_length = 30  # You used 30 in training
-
-        # Scale data
-        scaler = MinMaxScaler()
-        scaled_data = scaler.fit_transform(data[numeric_cols])
-
-        # Create sequences
-        X = []
-        for i in range(sequence_length, len(scaled_data)):
-            seq = scaled_data[i-sequence_length:i]
-            if seq.shape[0] == sequence_length:
-                X.append(seq)
-        X = np.array(X)
-
-        # Ensure correct shape
-        if X.ndim == 2:
-            X = np.expand_dims(X, axis=2)
-
-        # Make prediction
-        predictions_scaled = model.predict(X)
-
-        # Inverse transform if possible (for single output)
-        if predictions_scaled.shape[1] == 1:
-            predictions = scaler.inverse_transform(
-                np.hstack((predictions_scaled, np.zeros((len(predictions_scaled), len(numeric_cols)-1))))
-            )[:, 0]
+        if len(numeric_cols) < 2:
+            st.error("❌ Dataset must have at least two numeric columns for prediction.")
         else:
-            predictions = predictions_scaled  # multi-output
+            selected_cols = numeric_cols[:2]
+            st.success(f"✅ Using columns {selected_cols} for prediction")
 
-        # Plot
-        st.subheader("📈 Forecasted Demand")
-        plt.figure(figsize=(10, 4))
-        plt.plot(predictions, label="Predicted")
-        plt.xlabel("Time Step")
-        plt.ylabel("Predicted Value")
-        plt.legend()
-        st.pyplot(plt)
+            # Preprocessing
+            selected_data = data[selected_cols].dropna()
+            scaler = MinMaxScaler()
+            scaled_data = scaler.fit_transform(selected_data)
+
+            sequence_length = 30
+            X = []
+            for i in range(sequence_length, len(scaled_data)):
+                seq = scaled_data[i - sequence_length:i]
+                if seq.shape[0] == sequence_length:
+                    X.append(seq)
+            X = np.array(X)
+
+            # Reshape if needed
+            if X.ndim == 2:
+                X = np.expand_dims(X, axis=2)
+
+            model = load_model("model.h5")
+            predictions = model.predict(X)
+
+            # Inverse scale only the target (first column)
+            dummy = np.zeros((predictions.shape[0], scaled_data.shape[1]))
+            dummy[:, 0] = predictions[:, 0]
+            inv_scaled = scaler.inverse_transform(dummy)[:, 0]
+
+            # Plot
+            st.subheader("📈 Forecasted Electricity Demand")
+            plt.figure(figsize=(12, 6))
+            plt.plot(inv_scaled, label="Predicted Demand (kWh)")
+            plt.xlabel("Time Step")
+            plt.ylabel("Electricity Demand (kWh)")
+            plt.legend()
+            st.pyplot(plt)
 
     except Exception as e:
         st.error(f"❌ Error processing file: {e}")
