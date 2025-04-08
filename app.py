@@ -13,6 +13,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+
 # 🌈 Custom Styling
 st.markdown("""
     <style>
