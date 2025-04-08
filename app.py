@@ -20,7 +20,8 @@ if uploaded_file is not None:
         st.write(data.head())
 
         # Automatically pick numeric columns except date/time
-        numeric_cols = data.select_dtypes(include=[np.number]).columns.tolist()
+# Force only first 2 numeric features to match model input
+numeric_cols = data.select_dtypes(include=[np.number]).columns.tolist()[:2]
         if len(numeric_cols) == 0:
             st.error("❌ No numeric columns found for prediction.")
             st.stop()
