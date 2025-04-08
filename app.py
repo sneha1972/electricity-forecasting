@@ -7,32 +7,38 @@ from sklearn.preprocessing import MinMaxScaler
 
 # 🎨 Page Configuration
 st.set_page_config(
-    page_title="⚡ Electricity Demand Forecasting",
+    page_title="Electricity Demand Forecasting",
     page_icon="⚡",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-
 # 🌈 Custom Styling
 st.markdown("""
     <style>
     .main {
-        background: linear-gradient(135deg, #ffe6e6, #ffffcc);
+        background: linear-gradient(135deg, #e0f7fa, #f0f4c3);
         padding: 2rem;
         border-radius: 20px;
     }
     h1 {
-        color: #ff5733;
+        color: #1e88e5;
         text-align: center;
         font-family: 'Segoe UI';
     }
     .stDataFrame {
-        background-color: rgba(255, 255, 255, 0.85);
+        background-color: rgba(255, 255, 255, 0.9);
         border-radius: 10px;
     }
     footer {
         visibility: hidden;
+    }
+    .footer-text {
+        font-size: 14px;
+        color: #555;
+        text-align: center;
+        margin-top: 30px;
+        font-family: 'Segoe UI';
     }
     </style>
 """, unsafe_allow_html=True)
@@ -94,10 +100,10 @@ if uploaded_file is not None:
                         np.hstack([predictions, np.zeros((predictions.shape[0], 1))])
                     )[:, 0]
 
-                    # 🖼️ Plotting
+                    # 🖼️ Plotting with blue line
                     st.subheader("📈 Electricity Demand Prediction")
                     fig, ax = plt.subplots(figsize=(10, 4))
-                    ax.plot(predicted_values, color='blue', linewidth=2)
+                    ax.plot(predicted_values, color='#1e88e5', linewidth=2)  # 💙 Blue Line
                     ax.set_title("Predicted Electricity Demand", fontsize=16)
                     ax.set_xlabel("Time Steps")
                     ax.set_ylabel("Electricity Demand")
@@ -107,14 +113,6 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"❌ Error processing file: {e}")
 
-# 👣 Professional Footer
-st.markdown("""
-    <hr style="margin-top: 3rem; margin-bottom: 1rem;">
-    <div style='text-align: center; color: #555; font-size: 14px;'>
-        Developed by <strong>CSBS Final Year Students – GPREC</strong><br>
-        <em>Electricity Demand Forecasting using LSTM</em><br>
-        © 2025 All rights reserved.
-    </div>
-""", unsafe_allow_html=True)
-
+# 👣 Footer
+st.markdown("<div class='footer-text'>Final Year Project by CSBS Students - GPREC</div>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
